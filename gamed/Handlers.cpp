@@ -101,6 +101,7 @@ bool PacketHandler::handleSpawn(ENetPeer *peer, ENetPacket *packet) {
     spawn.gameId = 0;
     memcpy(spawn.name, peerInfo(peer)->name, peerInfo(peer)->nameLen);
     memcpy(spawn.type, peerInfo(peer)->type, peerInfo(peer)->typeLen);
+	spawn.skinID = peerInfo(peer)->skinNo;
     bool p2 = sendPacket(peer, reinterpret_cast<uint8 *>(&spawn), sizeof(HeroSpawn), CHL_S2C);
     HeroSpawn2 h2;
     h2.header.netId = peerInfo(peer)->netId;
@@ -327,7 +328,7 @@ bool PacketHandler::handleChatBoxMessage(HANDLE_ARGS) {
     ChatMessage *message = reinterpret_cast<ChatMessage *>(packet->data);
     //Lets do commands
     if(message->msg == '.') {
-        const char *cmd[] = { ".set", ".gold", ".speed", ".health", ".xp", ".ap", ".ad", ".mana", ".model", ".help" };
+        const char *cmd[] = { ".set", ".gold", ".speed", ".health", ".xp", ".ap", ".ad", ".mana", ".model", ".animation", ".triggerNexusParticles", ".help" };
         //Set field
         if(strncmp(message->getMessage(), cmd[0], strlen(cmd[0])) == 0) {
             uint32 blockNo = atoi(&message->getMessage()[strlen(cmd[0]) + 1]);
@@ -425,10 +426,26 @@ bool PacketHandler::handleChatBoxMessage(HANDLE_ARGS) {
         //Model
         if(strncmp(message->getMessage(), cmd[8], strlen(cmd[8])) == 0) {
             std::string sModel = (char *)&message->getMessage()[strlen(cmd[8]) + 1];
-            UpdateModel modelPacket(peerInfo(peer)->netId, (char *)sModel.c_str()); //96
+			int skinID = (int)atoi(&message->getMessage()[strlen(cmd[8]) + sModel.length()]);
+			sModel.erase(sModel.find_first_of(' '), sModel.length() - sModel.find_first_of(' '));
+            UpdateModel modelPacket(peerInfo(peer)->netId, (char *)sModel.c_str(), skinID); //96
             broadcastPacket(reinterpret_cast<uint8 *>(&modelPacket), sizeof(UpdateModel), CHL_S2C);
             return true;
         }
+
+		if(strncmp(message->getMessage(), cmd[9], strlen(cmd[9])) == 0) {
+            std::string animation = (char *)&message->getMessage()[strlen(cmd[9]) + 1];
+            PlayAnimation animationPacket(peerInfo(peer)->netId, (char *)animation.c_str());
+			cout << "Play Animation: " << animation << endl;
+			broadcastPacket(reinterpret_cast<uint8 *>(&animationPacket), sizeof(PlayAnimation), CHL_S2C);
+            return true;
+        }
+
+		if(strncmp(message->getMessage(), cmd[10], strlen(cmd[10])) == 0) {
+			NexusIdleParticles nexusParticlePacket(peerInfo(peer)->netId);
+			broadcastPacket(reinterpret_cast<uint8 *>(&nexusParticlePacket), sizeof(NexusIdleParticles), CHL_S2C);
+			return true;
+		}
     }
     switch(message->type) {
         case CMT_ALL:

@@ -486,21 +486,49 @@ struct ChatMessage {
 };
 
 typedef struct _UpdateModel {
-    _UpdateModel(DWORD netID, const char *szModel) {
+    _UpdateModel(DWORD netID, const char *szModel, int skinNo) {
         ZeroMemory(this, sizeof(_UpdateModel));
         header.cmd = (PacketCmd)0x96;
         header.netId = netID;
         id = netID & ~0x40000000;
-        bOk = 1;
-        unk1 = -1;
-        strncpy((char *)szName, szModel, 32);
+        bitField = 1;
+        skinID = skinNo;
+        strncpy((char *)model, szModel, 64);
     }
     PacketHeader header;
-    DWORD id;
-    BYTE bOk;
-    DWORD unk1;
-    BYTE szName[32];
+    int id;
+    BYTE bitField;
+    int skinID;
+    BYTE model[64];
 } UpdateModel;
+
+typedef struct _PlayAnimation {
+    _PlayAnimation(DWORD netID, const char *animation) {
+        ZeroMemory(this, sizeof(_PlayAnimation));
+        header.cmd = (PacketCmd)0xAF;
+        header.netId = netID;
+        flags = 0;
+		scaleTime = 12; //varies with animation length, so animations could be faster/slower than they should
+		startProgress = 0;
+		strncpy((char *)animationName, animation, 64);
+    }
+    PacketHeader header;
+    unsigned int flags;
+	float scaleTime;
+	float startProgress;
+	BYTE animationName[64];
+} PlayAnimation;
+
+
+typedef struct _NexusIdleParticles{
+	_NexusIdleParticles(DWORD netID) {
+        ZeroMemory(this, sizeof(_NexusIdleParticles));
+        header.cmd = (PacketCmd)0x04;
+        header.netId = netID;
+    }
+    PacketHeader header;
+} NexusIdleParticles;
+
 typedef struct _StatePacket {
     _StatePacket(PacketCmd state) {
         header.cmd = state;
@@ -530,22 +558,37 @@ struct FogUpdate2 {
 
 struct HeroSpawn {
     HeroSpawn() {
+		ZeroMemory(this, sizeof(HeroSpawn));
         header.cmd = PKT_S2C_HeroSpawn;
-        unk1 = 0;
-        memset(&name, 0, 128 + 64); //Set name + type to zero
-        x = 130880;
-        y = 502;
+		netNodeID = 0;
+        skillLevel = 1;
+		teamIsOrder = 1; //Order = Blue, Choas = Purple
+		isBot = 0;
+		botRank = 0;
+		spawnPosIndex = 0; //Indexes stored in client Inibins?
+		deathDurationRemaining = 0;
+		timeSinceDeath = 0;
+		bitfield = 0;
+        memset(&name, 0, 128 + 40); //Set name + champion to zero
     }
 
     PacketHeader header;
     uint32 netId; //Also found something about locking flag//Perhaps first 4 bits is type and rest is netId?? or something?? //Linked for mastery's (first uitn32, and also animation (looks like it) and possible more) often looks like XX 00 00 40 where XX is around 10-30
-    uint32 gameId; //1-number of players
-    uint32 x;       //Some coordinates, no idea how they work yet
-    uint32 y;
-    uint16 unk1;
+    uint32 gameId; //playerUID
+    BYTE netNodeID; //?
+    BYTE skillLevel; 
+	BYTE teamIsOrder;
+	BYTE isBot;
+	BYTE botRank;
+	BYTE spawnPosIndex;
+	int skinID;
     uint8 name[128];
-    uint8 type[64];
+    uint8 type[40];
+	float deathDurationRemaining;
+	float timeSinceDeath;
+	BYTE bitfield;
 } ;
+
 struct HeroSpawn2 {
     HeroSpawn2() {
         header.cmd = (PacketCmd)0xB9;
